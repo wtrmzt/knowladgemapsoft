@@ -6,3 +6,4 @@ pandas
 gunicorn
 openai
 requests
+spacy
