@@ -1,0 +1,9 @@
+// tsconfig.json (修正後)
+{
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ]
+  // compilerOptions は削除する
+}
