@@ -5,3 +5,4 @@ PyJWT
 pandas
 gunicorn
 openai
+requests
