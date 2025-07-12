@@ -1,5 +1,5 @@
 // src/components/admin/InspectorView.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNodesState, useEdgesState, ReactFlow, Controls, Background, MiniMap } from 'reactflow';
 import type { Node, Edge } from 'reactflow';
 import { adminService } from '../../services/adminService';
@@ -25,8 +25,8 @@ export function InspectorView() {
     const [history, setHistory] = useState<any[]>([]);
     const [selectedHistoryIndex, setSelectedHistoryIndex] = useState<number>(0);
     
-    const [nodes, setNodes, onNodesChange] = useNodesState<CustomNodeType[]>([]);
-    const [edges, setEdges, onEdgesChange] = useEdgesState<Edge[]>([]);
+    const [nodes, setNodes, onNodesChange] = useNodesState([]);
+    const [edges, setEdges, onEdgesChange] = useEdgesState([]);
     const [isSaving, setIsSaving] = useState(false);
     const [isRollingBack, setIsRollingBack] = useState(false);
 
