@@ -1,5 +1,5 @@
 // src/components/admin/CombinedMapView.tsx
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 // 必要なフックとコンポーネントをインポートします
 import {
     ReactFlow,
@@ -34,19 +34,6 @@ const OwnerNode = ({ data }: { data: CustomNodeData & { owner: string } }) => (
     </div>
 );
 // ★ 新規追加: 所有者グループを囲む背景ノード
-const GroupNode = ({ data, width, height }: { data: { label: string }, width?: number, height?: number }) => (
-    <div
-        style={{
-            width: width ? `${width}px` : '100%',
-            height: height ? `${height}px` : '100%',
-        }}
-        className="bg-blue-50 border border-blue-200 rounded-2xl shadow-sm"
-    >
-        <div className="p-4 text-lg font-semibold text-blue-700 opacity-80">
-            {data.label}
-        </div>
-    </div>
-);
 
 const nodeTypes = { ownerNode: OwnerNode };
 const elk = new ELK();
@@ -113,7 +100,7 @@ const FlowRenderer = (props: {
                 proOptions={{ hideAttribution: true }}
             >
                 <Controls />
-                <Background variant="dots" />
+                <Background color="#f0f0f0" gap={16} size={1} />
                 <MiniMap position="top-right" />
             </ReactFlow>
         </div>
@@ -243,8 +230,8 @@ function CombinedMapView() {
                         finalNodes.push({
                             ...originalNode,
                             position: {
-                                x: layoutNode.x ?? 0,
-                                y: layoutNode.y ?? 0,
+                                x: 'x' in layoutNode ? (layoutNode as any).x ?? 0 : 0,
+                                y: 'y' in layoutNode ? (layoutNode as any).y ?? 0 : 0,
                             },
                             // 親ノードのIDを指定し、ドラッグ範囲を親の境界内に制限
                             parentNode: group.id,
