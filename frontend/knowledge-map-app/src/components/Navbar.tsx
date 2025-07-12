@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "./ui/button";
 import { LogOut, BookOpen, UserCircle, Settings } from 'lucide-react'; // アイコン
