@@ -1,5 +1,5 @@
 // src/pages/AdminPage.tsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { InspectorView } from '../components/admin/InspectorView';
 // ★★★ ここが重要な修正点 ★★★
