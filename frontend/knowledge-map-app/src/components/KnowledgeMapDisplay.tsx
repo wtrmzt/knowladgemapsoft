@@ -8,7 +8,6 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   useReactFlow,
-  addEdge,
 } from 'reactflow';
 import type { Node, Edge, OnNodesChange, OnEdgesChange, NodeMouseHandler } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -16,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { mapService } from '@/services/mapService';
 import { loggingService } from '@/services/loggingService';
-import { Loader2, Search, PlusCircle, CheckCircle, History, ArrowLeft, X, CornerUpRight, Link as LinkIcon, ExternalLink } from 'lucide-react';
+import { Loader2, Search, PlusCircle, CheckCircle, History, ArrowLeft, X, CornerUpRight, Link as ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   Sheet,
@@ -26,7 +25,7 @@ import {
   SheetClose,
   SheetFooter,
 } from "@/components/ui/sheet";
-import type { CustomNodeData, SuggestedNode, KnowledgeMapData, TemporalRelatedNodesResponse, KnowledgeMapNode as ApiNode } from '../types';
+import type { CustomNodeData, SuggestedNode, TemporalRelatedNodesResponse } from '../types';
 import ELK from 'elkjs/lib/elk.bundled.js';
 
 type CustomNodeType = Node<CustomNodeData>;
@@ -36,22 +35,11 @@ interface KnowledgeMapDisplayProps {
   edges: Edge[];
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
-  onNodeAdded: (newNode: CustomNodeType, newEdge: Edge) => void;
+  onNodeAdded: (newNode: CustomNodeType | null, newEdge: Edge) => void;
   onApplyTemporalMap: (newNodes: CustomNodeType[], newEdges: Edge[]) => void;
   setNodesForLayout?: (nodes: CustomNodeType[]) => void;
   layoutTrigger?: number;
 }
-
-// APIから受け取ったエッジのsource/targetを正規化するヘルパー関数
-const normalizeEdge = (apiEdge: ApiEdge, idPrefix: string, i: number): Edge => ({
-  id: `${idPrefix}-${apiEdge.source ?? apiEdge.from}-${apiEdge.target ?? apiEdge.to}-${i}`,
-  source: String(apiEdge.source ?? apiEdge.from),
-  target: String(apiEdge.target ?? apiEdge.to),
-  animated: true,
-  style: { stroke: '#999', strokeWidth: 2 },
-});
-
-
 
 /**
  * プレビューパネル用のReactFlowインスタンス
@@ -353,8 +341,6 @@ function KnowledgeMapDisplay(props: KnowledgeMapDisplayProps) {
     const [suggestedNodes, setSuggestedNodes] = useState<SuggestedNode[]>([]);
     const [isTemporalSheetOpen, setIsTemporalSheetOpen] = useState(false);
 
-    const addedSuggestionIds = useMemo(() => new Set(nodes.filter(n => n.data.apiNodeId).map(n => n.data.apiNodeId)), [nodes]);
-
     const onNodeClick: NodeMouseHandler = useCallback((_event, node) => {
         loggingService.logActivity('CLICK_NODE', { nodeId: node.id, nodeLabel: (node.data as CustomNodeData).label });
         setSelectedNode(node as CustomNodeType);
@@ -366,7 +352,9 @@ function KnowledgeMapDisplay(props: KnowledgeMapDisplayProps) {
     const nodeLabelMap = useMemo(() => {
         const map = new Map<string, CustomNodeType>();
         nodes.forEach(node => {
-            map.set(node.data.label, node);
+            if (typeof node.data.label === 'string') {
+                map.set(node.data.label, node);
+            }
         });
         return map;
     }, [nodes]);
@@ -391,20 +379,6 @@ function KnowledgeMapDisplay(props: KnowledgeMapDisplayProps) {
             nodes.map(n => n.data.label)
         );
     }, [nodes]); // props.nodesが変更されるたびに再計算
-
-    const handleAddSuggestedNode = useCallback((suggestedNode: SuggestedNode) => {
-        if (!selectedNode) return;
-        loggingService.logActivity('ADD_SUGGESTED_NODE', { baseNodeId: selectedNode.id, addedNodeId: suggestedNode.id, addedNodeLabel: suggestedNode.label });
-        const newNode: CustomNodeType = {
-            id: `user-added-${suggestedNode.id}`,
-            data: { label: suggestedNode.label, sentence: suggestedNode.sentence, apiNodeId: suggestedNode.id },
-            position: { x: selectedNode.position.x + 150, y: selectedNode.position.y + 60 },
-            style: { background: 'hsl(var(--secondary))', color: 'hsl(var(--secondary-foreground))' },
-        };
-        const newEdge: Edge = { id: `e-${selectedNode.id}-to-${newNode.id}`, source: selectedNode.id, target: newNode.id, animated: true };
-        onNodeAdded(newNode, newEdge);
-        toast({ title: "成功", description: `ノード「${suggestedNode.label}」を追加しました。` });
-    }, [selectedNode, onNodeAdded, toast]);
     
     const handleSheetOpenChange = useCallback((open: boolean) => {
         setIsSheetOpen(open);
@@ -434,6 +408,7 @@ function KnowledgeMapDisplay(props: KnowledgeMapDisplayProps) {
                 target: existingNode.id, 
                 animated: true 
             };
+            
             
             // newNodeにnullを渡すことで、エッジのみを追加するよう親コンポーネントに伝える
             onNodeAdded(null, newEdge); 
@@ -493,7 +468,7 @@ function KnowledgeMapDisplay(props: KnowledgeMapDisplayProps) {
                     </SheetHeader>
                             {/* ★★★ Google検索リンクボタンを追加 ★★★ */}
                             <Button variant="outline" className="w-full" asChild>
-                                <a href={`https://www.google.com/search?q=${encodeURIComponent(selectedNode?.data?.label)}`} target="_blank" rel="noopener noreferrer">
+                                <a href={`https://www.google.com/search?q=${encodeURIComponent(selectedNode?.data?.label ?? "")}`} target="_blank" rel="noopener noreferrer">
                                     <ExternalLink className="h-4 w-4 mr-2" />
                                     Googleで「{selectedNode?.data?.label}」を検索
                                 </a>
@@ -526,7 +501,7 @@ function KnowledgeMapDisplay(props: KnowledgeMapDisplayProps) {
                                             return (
                                                 <li key={sNode.id} className={`p-3 border rounded-md flex justify-between items-center ${isAdded ? 'bg-muted/50' : ''}`}>
                                                     <h5 className="font-semibold text-sm">{sNode.label}</h5>
-                                                    <Button variant="outline" size="xs" disabled={isAdded} onClick={() => handleSuggestionClick(sNode)}>
+                                                    <Button variant="outline" size="sm" disabled={isAdded} onClick={() => handleSuggestionClick(sNode)}>
                                                         {isAdded ? <CheckCircle className="h-3 w-3 mr-1.5" /> : <PlusCircle className="h-3 w-3 mr-1.5" />}
                                                         {isAdded ? '追加済' : '追加'}
                                                     </Button>
